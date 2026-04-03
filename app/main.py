@@ -5,6 +5,7 @@ from sqlalchemy.orm import selectinload
 from typing import List
 import asyncio
 from datetime import datetime
+from app.notifications import publish_notification
 
 from app import schemas, models
 from app.database import get_db, async_engine
@@ -86,10 +87,38 @@ async def create_project(
     await db.commit()
     await db.refresh(db_project)
     
-    # Фоновая задача
-    background_tasks.add_task(log_action, "CREATE_PROJECT", db_project.id)
+    # Отправляем уведомление о создании проекта
+    background_tasks.add_task(
+        publish_notification,
+        user_id=1,  # TODO: брать из JWT
+        title="Создан проект",
+        content=f'Проект "{db_project.name}" успешно создан'
+    )
     
-    return db_project
+    background_tasks.add_task(log_action, "CREATE_PROJECT", db_project.id)
+
+    project_result = await db.execute(
+        select(models.Project).where(models.Project.id == db_project.id)
+    )
+    project_row = project_result.scalar_one()
+
+    tasks_result = await db.execute(
+        select(models.Task).where(models.Task.project_id == db_project.id)
+    )
+    tasks_rows = tasks_result.scalars().all()
+    tasks_out = [
+        schemas.TaskResponse.model_validate(t, from_attributes=True)
+        for t in tasks_rows
+    ]
+
+    return schemas.ProjectResponse(
+        id=project_row.id,
+        name=project_row.name,
+        description=project_row.description,
+        status=project_row.status,
+        created_at=project_row.created_at,
+        tasks=tasks_out,
+    )
 
 @app.put("/projects/{project_id}", response_model=schemas.ProjectResponse)
 async def update_project(
@@ -112,8 +141,30 @@ async def update_project(
     
     await db.commit()
     await db.refresh(db_project)
-    
-    return db_project
+
+    # Аналогично `create_project`: возвращаем DTO, а не ORM-объект.
+    project_result = await db.execute(
+        select(models.Project).where(models.Project.id == db_project.id)
+    )
+    project_row = project_result.scalar_one()
+
+    tasks_result = await db.execute(
+        select(models.Task).where(models.Task.project_id == db_project.id)
+    )
+    tasks_rows = tasks_result.scalars().all()
+    tasks_out = [
+        schemas.TaskResponse.model_validate(t, from_attributes=True)
+        for t in tasks_rows
+    ]
+
+    return schemas.ProjectResponse(
+        id=project_row.id,
+        name=project_row.name,
+        description=project_row.description,
+        status=project_row.status,
+        created_at=project_row.created_at,
+        tasks=tasks_out,
+    )
 
 @app.delete("/projects/{project_id}")
 async def delete_project(
@@ -181,7 +232,13 @@ async def create_task(
     await db.commit()
     await db.refresh(db_task)
     
-    background_tasks.add_task(log_action, "CREATE_TASK", db_task.id)
+    # Отправляем уведомление о создании задачи
+    background_tasks.add_task(
+        publish_notification,
+        user_id=1,  # TODO: брать из JWT
+        title="Создана задача",
+        content=f'Задача "{task.name}" добавлена в проект'
+    )
     
     return db_task
 
@@ -227,11 +284,15 @@ async def update_task(
     await db.commit()
     await db.refresh(db_task)
     
-    # Если задача завершена - прокачиваем навыки
+    # Если задача завершена - отправляем уведомление
     if old_status != "done" and db_task.status == "done":
         background_tasks.add_task(update_user_skills, db_task.name)
-    
-    background_tasks.add_task(log_action, "UPDATE_TASK", task_id)
+        background_tasks.add_task(
+            publish_notification,
+            user_id=1,  # TODO: брать из JWT
+            title="Задача завершена",
+            content=f'Задача "{db_task.name}" выполнена! + навыки'
+    )
     
     return db_task
 

@@ -6,3 +6,4 @@ alembic
 python-dotenv
 pydantic
 greenlet
+aio-pika
