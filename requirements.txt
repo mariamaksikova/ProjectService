@@ -5,5 +5,10 @@ asyncpg
 alembic
 python-dotenv
 pydantic
+typing_extensions
 greenlet
 aio-pika
+pytest
+pytest-asyncio
+httpx
+aiosqlite

@@ -21,8 +21,6 @@ async def log_action(action: str, item_id: int):
     """Имитация логирования действий (например, в отдельную таблицу или файл)"""
     await asyncio.sleep(1)  # имитация долгой операции
     print(f"[{datetime.now()}] LOG: {action} for item {item_id}")
-    # Здесь можно отправить событие в analytics-service
-    # или записать в отдельную таблицу логов
 
 async def update_user_skills(task_name: str):
     """Имитация прокачки навыков при завершении задачи"""
@@ -41,20 +39,17 @@ def root():
 # ----- Projects -----
 @app.get("/projects", response_model=List[schemas.ProjectResponse])
 async def get_projects(
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    background_tasks: BackgroundTasks = None
 ):
     """Получить список всех проектов (асинхронно)"""
-    # Асинхронный запрос с подгрузкой задач
     result = await db.execute(
         select(models.Project).options(selectinload(models.Project.tasks))
     )
     projects = result.scalars().all()
-    
-    # Фоновая задача (не блокирует ответ)
-    if background_tasks:
-        background_tasks.add_task(log_action, "GET_ALL_PROJECTS", 0)
-    
+
+    background_tasks.add_task(log_action, "GET_ALL_PROJECTS", 0)
+
     return projects
 
 @app.get("/projects/{project_id}", response_model=schemas.ProjectResponse)
@@ -142,7 +137,6 @@ async def update_project(
     await db.commit()
     await db.refresh(db_project)
 
-    # Аналогично `create_project`: возвращаем DTO, а не ORM-объект.
     project_result = await db.execute(
         select(models.Project).where(models.Project.id == db_project.id)
     )
@@ -318,11 +312,10 @@ async def delete_task(
     
     return {"message": "Task deleted successfully"}
 
-# ----- Дополнительный асинхронный эндпоинт -----
+# ----- Дополнительный эндпоинт -----
 @app.get("/stats")
 async def get_stats(db: AsyncSession = Depends(get_db)):
-    """Получить статистику по проектам и задачам (асинхронно)"""
-    # Выполняем несколько запросов параллельно
+    """Получить статистику по проектам и задачам"""
     projects_query = select(models.Project)
     tasks_query = select(models.Task)
     
@@ -334,7 +327,6 @@ async def get_stats(db: AsyncSession = Depends(get_db)):
     projects = projects_result.scalars().all()
     tasks = tasks_result.scalars().all()
     
-    # Считаем статистику
     total_projects = len(projects)
     total_tasks = len(tasks)
     tasks_by_status = {
