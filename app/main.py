@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete
+from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from typing import List
 import asyncio
@@ -8,7 +8,7 @@ from datetime import datetime
 from app.notifications import publish_notification
 
 from app import schemas, models
-from app.database import get_db, async_engine
+from app.database import get_db
 
 app = FastAPI(
     title="Project Service API",

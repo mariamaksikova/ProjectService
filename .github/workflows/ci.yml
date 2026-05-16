@@ -1,4 +1,4 @@
-name: CI
+name: ProjectService CI/CD Pipeline
 
 on:
   push:
@@ -6,11 +6,28 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: cicd-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  lint:
+    name: Lint & Static Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Ruff
+        run: pip install ruff
+
+      - name: Ruff check
+        run: ruff check app tests
+
   test:
+    name: Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,8 +44,32 @@ jobs:
       - name: Run tests
         run: pytest tests/ -v --tb=short
 
-  docker:
-    needs: test
+  docker-build:
+    name: Docker Build (project-service)
+    needs: [lint, test]
+    if: >
+      github.event_name == 'pull_request' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' &&
+       github.ref != 'refs/heads/main' &&
+       !startsWith(github.ref, 'refs/tags/v'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: project-service:ci
+
+  push-to-registry:
+    name: Push to Registry
+    needs: [lint, test]
     if: >-
       github.event_name == 'push' &&
       (github.ref == 'refs/heads/main' ||
