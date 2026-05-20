@@ -8,6 +8,7 @@ pydantic
 typing_extensions
 greenlet
 aio-pika
+python-jose[cryptography]
 pytest
 pytest-asyncio
 httpx

@@ -42,6 +42,7 @@ class ProjectUpdate(BaseModel):
 
 class ProjectResponse(ProjectBase):
     id: int
+    owner_id: int
     created_at: datetime
     tasks: List[TaskResponse] = []
 
