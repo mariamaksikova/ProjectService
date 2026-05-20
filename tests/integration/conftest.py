@@ -6,6 +6,7 @@ from sqlalchemy.pool import StaticPool
 # Импорт для побочного эффекта: регистрация ORM-моделей в Base.metadata
 from app import models  # noqa: F401
 from app.database import Base, get_db
+from app.auth import get_current_user
 
 
 async def _noop(*args, **kwargs):
@@ -42,6 +43,7 @@ async def client(async_engine, monkeypatch):
     from app.main import app
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = lambda: 1
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
