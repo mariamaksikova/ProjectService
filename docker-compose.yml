@@ -21,10 +21,21 @@ services:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
     ports:
-      - "5672:5672" 
-      - "15672:15672" 
+      - "5672:5672"
+      - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: project_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
 volumes:
