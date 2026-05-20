@@ -9,6 +9,12 @@ from app.notifications import publish_notification
 
 from app import schemas, models
 from app.database import get_db
+from app.metrics import (
+    projects_created_total,
+    refresh_business_metrics,
+    setup_metrics,
+    tasks_created_total,
+)
 
 app = FastAPI(
     title="Project Service API",
@@ -33,8 +39,16 @@ def root():
     return {
         "message": "Project Service API",
         "docs": "/docs",
-        "status": "running with PostgreSQL"
+        "health": "/health",
+        "metrics": "/metrics",
+        "status": "running with PostgreSQL",
     }
+
+
+@app.get("/health")
+async def health():
+    """Проверка живости сервиса (для оркестраторов и мониторинга)."""
+    return {"status": "ok"}
 
 # ----- Projects -----
 @app.get("/projects", response_model=List[schemas.ProjectResponse])
@@ -91,6 +105,9 @@ async def create_project(
     )
     
     background_tasks.add_task(log_action, "CREATE_PROJECT", db_project.id)
+
+    projects_created_total.inc()
+    await refresh_business_metrics(db)
 
     project_result = await db.execute(
         select(models.Project).where(models.Project.id == db_project.id)
@@ -177,9 +194,11 @@ async def delete_project(
     
     await db.delete(db_project)
     await db.commit()
-    
+
+    await refresh_business_metrics(db)
+
     background_tasks.add_task(log_action, "DELETE_PROJECT", project_id)
-    
+
     return {"message": "Project deleted successfully"}
 
 # ----- Tasks -----
@@ -233,7 +252,10 @@ async def create_task(
         title="Создана задача",
         content=f'Задача "{task.name}" добавлена в проект'
     )
-    
+
+    tasks_created_total.inc()
+    await refresh_business_metrics(db)
+
     return db_task
 
 @app.get("/tasks/{task_id}", response_model=schemas.TaskResponse)
@@ -307,9 +329,11 @@ async def delete_task(
     
     await db.delete(db_task)
     await db.commit()
-    
+
+    await refresh_business_metrics(db)
+
     background_tasks.add_task(log_action, "DELETE_TASK", task_id)
-    
+
     return {"message": "Task deleted successfully"}
 
 # ----- Дополнительный эндпоинт -----
@@ -336,8 +360,13 @@ async def get_stats(db: AsyncSession = Depends(get_db)):
         "done": sum(1 for t in tasks if t.status == "done")
     }
     
+    await refresh_business_metrics(db)
+
     return {
         "total_projects": total_projects,
         "total_tasks": total_tasks,
         "tasks_by_status": tasks_by_status
     }
+
+
+setup_metrics(app)
