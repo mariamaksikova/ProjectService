@@ -90,7 +90,7 @@
       "targets": [
         {
           "datasource": { "uid": "prometheus-ds" },
-          "expr": "project_service_projects_created_total_total",
+          "expr": "project_service_projects_created_total",
           "legendFormat": ""
         }
       ]
@@ -120,7 +120,7 @@
       "targets": [
         {
           "datasource": { "uid": "prometheus-ds" },
-          "expr": "project_service_tasks_created_total_total",
+          "expr": "project_service_tasks_created_total",
           "legendFormat": ""
         }
       ]
@@ -223,12 +223,12 @@
       "targets": [
         {
           "datasource": { "uid": "prometheus-ds" },
-          "expr": "rate(project_service_projects_created_total_total[1m]) * 60",
+          "expr": "rate(project_service_projects_created_total[1m]) * 60",
           "legendFormat": "проекты/мин"
         },
         {
           "datasource": { "uid": "prometheus-ds" },
-          "expr": "rate(project_service_tasks_created_total_total[1m]) * 60",
+          "expr": "rate(project_service_tasks_created_total[1m]) * 60",
           "legendFormat": "задачи/мин"
         }
       ]
