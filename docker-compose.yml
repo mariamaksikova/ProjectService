@@ -69,15 +69,18 @@ services:
     restart: unless-stopped
 
   loki:
-    image: grafana/loki:2.9.0
+    image: grafana/loki:3.0.0
     container_name: project_loki
     ports:
       - "3100:3100"
-    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/loki.yml
     restart: unless-stopped
 
   promtail:
-    image: grafana/promtail:2.9.0
+    image: grafana/promtail:3.0.0
     container_name: project_promtail
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -109,3 +112,4 @@ volumes:
   postgres_data:
   rabbitmq_data:
   grafana_data:
+  loki_data:

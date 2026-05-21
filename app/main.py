@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -10,7 +11,7 @@ from app.auth import get_current_user
 from app.logger import logger
 
 from app import schemas, models
-from app.database import get_db
+from app.database import get_db, AsyncSessionLocal
 from app.metrics import (
     projects_created_total,
     refresh_business_metrics,
@@ -18,10 +19,22 @@ from app.metrics import (
     tasks_created_total,
 )
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # При старте сервиса сразу загружаем реальные значения из БД в Gauge
+    async with AsyncSessionLocal() as db:
+        await refresh_business_metrics(db)
+    logger.info("service_started metrics_initialized")
+    yield
+    logger.info("service_stopped")
+
+
 app = FastAPI(
     title="Project Service API",
     description="Сервис для управления проектами и задачами",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 async def log_action(action: str, item_id: int):
