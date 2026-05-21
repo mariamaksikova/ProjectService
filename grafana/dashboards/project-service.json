@@ -233,6 +233,30 @@
         }
       ]
     }
+  ,
+    {
+      "id": 9,
+      "title": "Логи сервиса",
+      "type": "logs",
+      "gridPos": { "x": 0, "y": 20, "w": 24, "h": 10 },
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "loki-ds" },
+          "expr": "{container=\"project_service\"}",
+          "legendFormat": ""
+        }
+      ]
+    }
   ],
   "schemaVersion": 38
 }

@@ -2,6 +2,7 @@ import json
 import os
 import aio_pika
 from typing import Optional
+from app.logger import logger
 
 async def publish_notification(
     user_id: int,
@@ -45,5 +46,4 @@ async def publish_notification(
                 routing_key="notifications"
             )
     except Exception as e:
-        # Логируем ошибку, но не блокируем основной процесс
-        print(f"Failed to send notification: {e}")
+        logger.error("notification_failed user_id=%d title=%r error=%s", user_id, title, e)

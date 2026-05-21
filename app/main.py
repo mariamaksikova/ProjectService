@@ -7,6 +7,7 @@ import asyncio
 from datetime import datetime
 from app.notifications import publish_notification
 from app.auth import get_current_user
+from app.logger import logger
 
 from app import schemas, models
 from app.database import get_db
@@ -25,11 +26,11 @@ app = FastAPI(
 
 async def log_action(action: str, item_id: int):
     await asyncio.sleep(1)
-    print(f"[{datetime.now()}] LOG: {action} for item {item_id}")
+    logger.info("action=%s item_id=%d", action, item_id)
 
 async def update_user_skills(task_name: str):
     await asyncio.sleep(0.5)
-    print(f"Skill updated based on task: {task_name}")
+    logger.info("skill_updated task=%r", task_name)
 
 # ----- Корневой эндпоинт -----
 @app.get("/")
@@ -93,6 +94,7 @@ async def create_project(
     db.add(db_project)
     await db.commit()
     await db.refresh(db_project)
+    logger.info("project_created id=%d name=%r owner_id=%d", db_project.id, db_project.name, user_id)
 
     background_tasks.add_task(
         publish_notification,
@@ -192,6 +194,7 @@ async def delete_project(
     await db.delete(db_project)
     await db.commit()
     await refresh_business_metrics(db)
+    logger.info("project_deleted id=%d owner_id=%d", project_id, user_id)
     background_tasks.add_task(log_action, "DELETE_PROJECT", project_id)
     return {"message": "Project deleted successfully"}
 
@@ -238,6 +241,7 @@ async def create_task(
     db.add(db_task)
     await db.commit()
     await db.refresh(db_task)
+    logger.info("task_created id=%d name=%r project_id=%d owner_id=%d", db_task.id, db_task.name, project_id, user_id)
 
     background_tasks.add_task(
         publish_notification,
@@ -307,7 +311,9 @@ async def update_task(
     await db.commit()
     await db.refresh(db_task)
 
+    logger.info("task_updated id=%d status=%r owner_id=%d", db_task.id, db_task.status, user_id)
     if old_status != "done" and db_task.status == "done":
+        logger.info("task_completed id=%d name=%r owner_id=%d", db_task.id, db_task.name, user_id)
         background_tasks.add_task(update_user_skills, db_task.name)
         background_tasks.add_task(
             publish_notification,
