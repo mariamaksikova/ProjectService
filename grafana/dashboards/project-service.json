@@ -238,22 +238,23 @@
       "id": 9,
       "title": "Логи сервиса",
       "type": "logs",
+      "datasource": { "type": "loki", "uid": "loki-ds" },
       "gridPos": { "x": 0, "y": 20, "w": 24, "h": 10 },
       "options": {
         "showTime": true,
-        "showLabels": false,
+        "showLabels": true,
         "showCommonLabels": false,
         "wrapLogMessage": true,
-        "prettifyLogMessage": false,
         "enableLogDetails": true,
         "dedupStrategy": "none",
         "sortOrder": "Descending"
       },
       "targets": [
         {
-          "datasource": { "uid": "loki-ds" },
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki-ds" },
           "expr": "{container=\"project_service\"}",
-          "legendFormat": ""
+          "queryType": "range"
         }
       ]
     }
